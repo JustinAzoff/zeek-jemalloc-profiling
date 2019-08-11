@@ -61,7 +61,7 @@ class JEMallocProfiling(PluginBase.Plugin):
 
     def options(self):
         return [
-            ("lg_prof_interval", "int", 26, "see http://jemalloc.net/jemalloc.3.html#opt.lg_prof_interval"),
+            ("lg_prof_interval", "int", 30, "see http://jemalloc.net/jemalloc.3.html#opt.lg_prof_interval"),
             ("malloc_conf", "string", "", "extra options to append to MALLOC_CONF"),
         ]
 
