@@ -16,7 +16,7 @@ import sys
 #little namespacing
 class JE:
     @classmethod
-    def get_stats(binary=BINARY):
+    def get_stats(kls, binary=BINARY):
         env = os.environ.copy()
         env["MALLOC_CONF"] = "stats_print:true"
         p = subprocess.Popen([binary, "-N"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
@@ -28,7 +28,7 @@ class JE:
         return err.decode().split("\n")
 
     @classmethod
-    def get_config():
+    def get_config(kls):
         cfg = {}
         stats = JE.get_stats()
         conf_lines = [line for line in stats if 'config.' in line]
@@ -40,7 +40,7 @@ class JE:
         return cfg
 
     @classmethod
-    def is_profiling_enalbed():
+    def is_profiling_enalbed(kls):
         cfg = JE.get_config()
         return cfg.get('config.prof', '') == 'true'
 
@@ -57,6 +57,8 @@ class JEMallocProfiling(PluginBase.Plugin):
 
     def options(self):
         return [
+            ("logger", "bool", False, "enable profiling on logger"),
+            ("manager", "bool", False, "enable profiling on manager"),
             ("workers", "string", "first", "which workers to run on per node [first,all]"),
             ("lg_prof_interval", "int", 20, "see http://jemalloc.net/jemalloc.3.html#opt.lg_prof_interval"),
             ("malloc_conf", "string", "", "extra options to append to MALLOC_CONF"),
@@ -66,6 +68,8 @@ class JEMallocProfiling(PluginBase.Plugin):
         self.log_directory = self.getGlobalOption("logdir")
         self.binary = self.getGlobalOption(BINARY)
         profile_all_workers = self.getOption("workers") == "all"
+        profile_logger = self.getOption("logger") == "all"
+        profile_manager = self.getOption("manager") == "all"
         lg_prof_interval = self.getOption("lg_prof_interval")
         malloc_conf_extra = self.getOption("malloc_conf")
 
@@ -78,13 +82,19 @@ class JEMallocProfiling(PluginBase.Plugin):
 
         seen_hosts = set()
         for nn in self.nodes():
-            first_on_host = nn.host not in seen_hosts
-            seen_hosts.add(nn.host)
+            profile_this_process = False
+            if nn.type == "logger":
+                profile_this_process = profile_logger
+            elif nn.type == "manager":
+                profile_this_process = profile_manager
+            elif nn.type == "worker":
+                first_on_host = nn.host not in seen_hosts
+                seen_hosts.add(nn.host)
 
-            profile_this_worker = profile_all_workers or first_on_host
-            if profile_this_worker:
-                nn.env_vars.setdefault("MALLOC_CONF", full_malloc_conf)
-                self.message("Enabling jemalloc profiling on {} {}".format(nn.host, nn.name))
+                profile_this_worker = profile_all_workers or first_on_host
+                if profile_this_worker:
+                    nn.env_vars.setdefault("MALLOC_CONF", full_malloc_conf)
+                    self.message("Enabling jemalloc profiling on {} {}".format(nn.host, nn.name))
         return True
 
 
