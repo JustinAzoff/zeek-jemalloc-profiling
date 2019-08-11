@@ -76,9 +76,9 @@ def process_once(spool_dir):
     processed = 0
     files = glob.glob(os.path.join(spool_dir, "*", "jeprof.out*"))
     for f in sorted(files, key=sort_key):
-        print(f)
+        info = info_from_filename(f)
         res = run_jeprof(f)
-        res.update(info_from_filename(f))
+        info.update(res)
         with open("prof.log.txt", 'a') as l:
             l.write(json.dumps(res) + "\n")
         os.unlink(f)
