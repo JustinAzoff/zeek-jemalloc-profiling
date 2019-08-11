@@ -1,0 +1,4 @@
+[package]
+description=A broctl plugin that enables jemalloc profiling
+plugin_dir = .
+tags = broctl, jemalloc, profiling
