@@ -30,12 +30,12 @@ Total: 2096.0 MB
      0.0   0.0% 100.0%      7.5   1.7% Connection::InactivityTimer
 """
 
-def parse(prof):
+def parse(prof,max_lines=20):
     lines = [l.rstrip() for l in prof.splitlines()]
     total_mb = float(lines[0].split()[1])
     locations = []
     profile = {"total_mb": total_mb, "locations": locations}
-    for line in lines[1:]:
+    for line in lines[1:max_lines+1]:
         line = line.replace("% ", " ")
         a, b, c, d, e, func = line.split(None, 5)
         locations.append({
@@ -64,12 +64,21 @@ def run_jeprof(f):
     parsed = parse(out.decode())
     return parsed
 
+def info_from_filename(f):
+    worker = os.path.basename(os.path.dirname(f))
+    mtime = os.stat(f).st_mtime
+    return {
+        "process": worker,
+        "mtime": mtime,
+    }
+
 def process_once(spool_dir):
     processed = 0
     files = glob.glob(os.path.join(spool_dir, "*", "jeprof.out*"))
     for f in sorted(files, key=sort_key):
         print(f)
         res = run_jeprof(f)
+        res.update(info_from_filename(f))
         with open("prof.log.txt", 'a') as l:
             l.write(json.dumps(res) + "\n")
         os.unlink(f)
