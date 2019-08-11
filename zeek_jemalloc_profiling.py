@@ -55,10 +55,37 @@ class JEMallocProfiling(PluginBase.Plugin):
     def pluginVersion(self):
         return 1
 
+    def options(self):
+        return [
+            ("workers", "string", "first", "which workers to run on per node [first,all]"),
+            ("lg_prof_interval", "int", 20, "see http://jemalloc.net/jemalloc.3.html#opt.lg_prof_interval"),
+            ("malloc_conf", "string", "", "extra options to append to MALLOC_CONF"),
+        ]
+
     def init(self):
         self.log_directory = self.getGlobalOption("logdir")
         self.binary = self.getGlobalOption(BINARY)
+        profile_all_workers = self.getOption("workers") == "all"
+        lg_prof_interval = self.getOption("lg_prof_interval")
+        malloc_conf_extra = self.getOption("malloc_conf")
+
+        def get_malloc_conf():
+            base = "prof:true,prof_prefix:jeprof.out,lg_prof_interval:{}".format(lg_prof_interval)
+            if not malloc_conf_extra:
+                return base
+            return base + "," + malloc_conf_extra
+        full_malloc_conf = get_malloc_conf()
+
+        seen_hosts = set()
+        for nn in self.nodes():
+            firat_on_host = nn.host not in seen_hosts
+            seen_hosts.add(nn.host)
+
+            profile_this_worker = profile_all_workers or first_on_host
+            if profile_this_worker:
+                nn.env_vars.setdefault("MALLOC_CONF", full_malloc_conf)
         return True
+
 
     def commands(self):
         return [
