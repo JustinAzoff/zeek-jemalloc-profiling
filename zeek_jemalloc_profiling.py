@@ -16,10 +16,10 @@ import sys
 #little namespacing
 class JE:
     @classmethod
-    def get_stats(binary=BINARY)
+    def get_stats(binary=BINARY):
         env = os.environ.copy()
         env["MALLOC_CONF"] = "stats_print:true"
-        p = subprocess.Popen([binary "-N"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
+        p = subprocess.Popen([binary, "-N"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
         out, err = p.communicate()
         if b'built-in' not in out:
             raise Exception("plugin list failed")
@@ -103,7 +103,7 @@ class JEMallocProfiling(PluginBase.Plugin):
 
     def cmd_custom_check(self):
         enabled = JE.is_profiling_enalbed()
-        self.message("jemalloc profiling enabled: {}".format(enabled)
+        self.message("jemalloc profiling enabled: {}".format(enabled))
         results = cmdresult.CmdResult()
         results.ok = enabled
         return results
