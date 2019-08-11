@@ -90,8 +90,8 @@ class JEMallocProfiling(PluginBase.Plugin):
 
     def commands(self):
         return [
-            ("check", "", "Verify that jemalloc is in use and profiling is enabled")
-            ("process", "", "Process profile output")
+            ("check", "", "Verify that jemalloc is in use and profiling is enabled"),
+            ("process", "", "Process profile output"),
         ]
 
     def cmd_custom(self, cmd, args, cmdout):
