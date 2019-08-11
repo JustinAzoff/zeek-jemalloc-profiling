@@ -84,6 +84,7 @@ class JEMallocProfiling(PluginBase.Plugin):
             profile_this_worker = profile_all_workers or first_on_host
             if profile_this_worker:
                 nn.env_vars.setdefault("MALLOC_CONF", full_malloc_conf)
+                self.message("Enabling jemalloc profiling on {} {}".format(nn.host, nn.name))
         return True
 
 
