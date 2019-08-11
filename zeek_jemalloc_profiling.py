@@ -78,7 +78,7 @@ class JEMallocProfiling(PluginBase.Plugin):
 
         seen_hosts = set()
         for nn in self.nodes():
-            firat_on_host = nn.host not in seen_hosts
+            first_on_host = nn.host not in seen_hosts
             seen_hosts.add(nn.host)
 
             profile_this_worker = profile_all_workers or first_on_host
