@@ -80,7 +80,7 @@ def process_once(spool_dir):
         res = run_jeprof(f)
         info.update(res)
         with open("prof.log.txt", 'a') as l:
-            l.write(json.dumps(res) + "\n")
+            l.write(json.dumps(info) + "\n")
         os.unlink(f)
         processed += 1
     return processed
