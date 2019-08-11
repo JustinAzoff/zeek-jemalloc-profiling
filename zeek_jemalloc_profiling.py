@@ -66,7 +66,7 @@ class JEMallocProfiling(PluginBase.Plugin):
         ]
 
     def init(self):
-        self.log_directory = self.getGlobalOption("logdir")
+        self.spool_directory = self.getGlobalOption("spooldir")
         self.binary = self.getGlobalOption(BINARY)
         lg_prof_interval = self.getOption("lg_prof_interval")
         malloc_conf_extra = self.getOption("malloc_conf")
@@ -115,4 +115,6 @@ class JEMallocProfiling(PluginBase.Plugin):
         return results
 
     def cmd_custom_process(self):
-        pass
+        results = cmdresult.CmdResult()
+        results.ok = True
+        return results
