@@ -50,26 +50,24 @@ class JEMallocProfiling(PluginBase.Plugin):
         super(JEMallocProfiling, self).__init__(apiversion=1)
 
     def name(self):
-        return "jemalloc-profiling"
+        return "jeprof"
+
+    def nodeKeys(self):
+        return ["enable", "all_workers"]
+
 
     def pluginVersion(self):
         return 1
 
     def options(self):
         return [
-            ("logger", "bool", False, "enable profiling on logger"),
-            ("manager", "bool", False, "enable profiling on manager"),
-            ("workers", "string", "first", "which workers to run on per node [first,all]"),
-            ("lg_prof_interval", "int", 20, "see http://jemalloc.net/jemalloc.3.html#opt.lg_prof_interval"),
+            ("lg_prof_interval", "int", 26, "see http://jemalloc.net/jemalloc.3.html#opt.lg_prof_interval"),
             ("malloc_conf", "string", "", "extra options to append to MALLOC_CONF"),
         ]
 
     def init(self):
         self.log_directory = self.getGlobalOption("logdir")
         self.binary = self.getGlobalOption(BINARY)
-        profile_all_workers = self.getOption("workers") == "all"
-        profile_logger = self.getOption("logger") == "all"
-        profile_manager = self.getOption("manager") == "all"
         lg_prof_interval = self.getOption("lg_prof_interval")
         malloc_conf_extra = self.getOption("malloc_conf")
 
@@ -83,18 +81,16 @@ class JEMallocProfiling(PluginBase.Plugin):
         seen_hosts = set()
         for nn in self.nodes():
             profile_this_process = False
-            if nn.type == "logger":
-                profile_this_process = profile_logger
-            elif nn.type == "manager":
-                profile_this_process = profile_manager
-            elif nn.type == "worker":
+            if nn.type != "worker":
+                profile_this_process = self._to_bool(nn.jeprof_enable or 'false')
+            else:
                 first_on_host = nn.host not in seen_hosts
                 seen_hosts.add(nn.host)
+                profile_this_process = first_on_host or self._to_bool(nn.jeprof_all_workers or 'false')
 
-                profile_this_worker = profile_all_workers or first_on_host
-                if profile_this_worker:
-                    nn.env_vars.setdefault("MALLOC_CONF", full_malloc_conf)
-                    self.message("Enabling jemalloc profiling on {} {}".format(nn.host, nn.name))
+            if profile_this_process:
+                nn.env_vars.setdefault("MALLOC_CONF", full_malloc_conf)
+                self.message("Enabling jemalloc profiling on {} {}".format(nn.host, nn.name))
         return True
 
 
