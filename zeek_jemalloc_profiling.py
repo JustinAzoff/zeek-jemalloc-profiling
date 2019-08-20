@@ -90,7 +90,7 @@ class JEMallocProfiling(PluginBase.Plugin):
 
             if profile_this_process:
                 nn.env_vars.setdefault("MALLOC_CONF", full_malloc_conf)
-                self.message("Enabling jemalloc profiling on {} {}".format(nn.host, nn.name))
+                #self.message("Enabling jemalloc profiling on {} {}".format(nn.host, nn.name))
         return True
 
 
