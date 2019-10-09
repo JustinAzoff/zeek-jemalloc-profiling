@@ -26,3 +26,7 @@ Global options for broctl.cfg:
 
     jeprof.malloc_conf=...  # extra options to add to MALLOC_CONF
     jeprof.lg_prof_interval=30 # see http://jemalloc.net/jemalloc.3.html#opt.lg_prof_interval
+
+# Processing profile output
+
+    ./process.py /usr/local/zeek/spool | tee -a jeprof.log
