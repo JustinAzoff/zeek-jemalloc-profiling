@@ -13,41 +13,10 @@ import os
 import subprocess
 import sys
 
-#little namespacing
-class JE:
-    @classmethod
-    def get_stats(kls, binary=BINARY):
-        env = os.environ.copy()
-        env["MALLOC_CONF"] = "stats_print:true"
-        p = subprocess.Popen([binary, "-N"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
-        out, err = p.communicate()
-        if b'built-in' not in out:
-            raise Exception("plugin list failed")
-        if b'jemalloc statistics' not in err:
-            raise Exception("No jemalloc stats was found, not built against jemalloc?")
-        return err.decode().split("\n")
-
-    @classmethod
-    def get_config(kls):
-        cfg = {}
-        stats = JE.get_stats()
-        conf_lines = [line for line in stats if 'config.' in line]
-        for line in conf_lines:
-            opt, arg = line.split(": ")
-            opt = opt.strip()
-            arg = arg.strip()
-            cfg[opt] = arg
-        return cfg
-
-    @classmethod
-    def is_profiling_enalbed(kls):
-        cfg = JE.get_config()
-        return cfg.get('config.prof', '') == 'true'
-
-
 class JEMallocProfiling(PluginBase.Plugin):
     def __init__(self):
         super(JEMallocProfiling, self).__init__(apiversion=1)
+        self.binary = None
 
     def name(self):
         return "jeprof"
@@ -64,6 +33,42 @@ class JEMallocProfiling(PluginBase.Plugin):
             ("lg_prof_interval", "int", 28, "see http://jemalloc.net/jemalloc.3.html#opt.lg_prof_interval"),
             ("malloc_conf", "string", "", "extra options to append to MALLOC_CONF"),
         ]
+
+    def _get_malloc_stats(self):
+        if not self.binary or not os.path.exists(self.binary):
+            raise Exception("Zeek binary path not configured or not found: {}".format(self.binary))
+
+        env = os.environ.copy()
+        env["MALLOC_CONF"] = "stats_print:true"
+        p = subprocess.Popen([self.binary, "-N"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
+        out, err = p.communicate()
+
+        if p.returncode != 0:
+            raise Exception("Zeek binary failed to run. Stderr: {}".format(err.decode(errors='ignore')))
+        if b'built-in' not in out:
+            raise Exception("Plugin list failed.  Is '{}' a valid Zeek binary?".format(self.binary))
+        if b'jemalloc statistics' not in err:
+            raise Exception("No jemalloc stat found.  Is Zeek at '{}' built against jemalloc?.".format(self.binary))
+        return err.decode().split("\n")
+
+    def _get_malloc_conf(self):
+        cfg = {}
+        stats = self._get_malloc_stats()
+        conf_lines = [line for line in stats if 'config.' in line]
+        for line in conf_lines:
+            opt, arg = line.split(": ")
+            opt = opt.strip()
+            arg = arg.strip()
+            cfg[opt] = arg
+        return cfg
+
+    def _is_profiling_enabled(self):
+        try:
+            cfg = self._get_malloc_conf()
+            return cfg.get('config.prof', '') == 'true'
+        except Exception as e:
+            self.error("jemalloc check resolved in error: {}".format(e))
+            return False
 
     def init(self):
         self.spool_directory = self.getGlobalOption("spooldir")
@@ -108,8 +113,12 @@ class JEMallocProfiling(PluginBase.Plugin):
         raise Exception("HUH?")
 
     def cmd_custom_check(self):
-        enabled = JE.is_profiling_enalbed()
-        self.message("jemalloc profiling enabled: {}".format(enabled))
+        enabled = self._is_profiling_enabled()
+        if enabled:
+            self.message("jemalloc profiling enabled: {}".format(enabled))
+        else:
+            self.message("jemalloc profiling is NOT enabled")
+
         results = cmdresult.CmdResult()
         results.ok = enabled
         return results
