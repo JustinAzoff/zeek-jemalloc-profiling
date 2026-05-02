@@ -32,6 +32,7 @@ class JEMallocProfiling(PluginBase.Plugin):
         return [
             ("lg_prof_interval", "int", 28, "see http://jemalloc.net/jemalloc.3.html#opt.lg_prof_interval"),
             ("malloc_conf", "string", "", "extra options to append to MALLOC_CONF"),
+            ("malloc_conf_env_var", "string", "MALLOC_CONF", "name of the environment variable to set (e.g. MALLOX_CONF for FreeBSD)"),
         ]
 
     def _get_malloc_stats(self):
@@ -39,7 +40,7 @@ class JEMallocProfiling(PluginBase.Plugin):
             raise Exception("Zeek binary path not configured or not found: {}".format(self.binary))
 
         env = os.environ.copy()
-        env["MALLOC_CONF"] = "stats_print:true"
+        env[self.getOption("malloc_conf_env_var")] = "stats_print:true"
         p = subprocess.Popen([self.binary, "-N"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
         out, err = p.communicate()
 
@@ -94,7 +95,7 @@ class JEMallocProfiling(PluginBase.Plugin):
                 profile_this_process = first_on_host or self._to_bool(nn.jeprof_all_workers or 'false')
 
             if profile_this_process:
-                nn.env_vars.setdefault("MALLOC_CONF", full_malloc_conf)
+                nn.env_vars.setdefault(self.getOption("malloc_conf_env_var"), full_malloc_conf)
                 #self.message("Enabling jemalloc profiling on {} {}".format(nn.host, nn.name))
         return True
 
